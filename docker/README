@@ -1,0 +1,11 @@
+Hadolint
+
+    We use hadolint as a linter for our docker files. To run linting, simply:
+
+    docker-compose run —-rm lint-dockerfile
+
+SHFMT
+
+      We use shfnt to format shell scripts and ensure consistent styling. You can run shfmt with:
+
+    docker-compose run ——rm shfnt

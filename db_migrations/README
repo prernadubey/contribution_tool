@@ -1,0 +1,44 @@
+# Migrations
+
+## Usage
+
+### Adding a new migration
+To add a new migration execute the following command:
+```sh
+alembic revision --autogenerate -m "message"
+```
+Arguments:
+* `-m` - new migration message;
+
+The new migration will be added to `migrations/versions` directory.
+
+Refer to [alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html#create-a-migration-script)
+for further details.
+
+### Applying/reverting migrations in DV
+Before applying or reverting migrations, make sure that DB connection env vars
+are configured.
+
+```sh
+alembic upgrade head  # execute all migrations
+# in order to execute a subset of migrations,
+# replace `head` with the revision ID of the last target migration.
+```
+
+```sh
+alembic downgrade base  # revert all migrations
+# in order to revert a subset of migrations,
+# replace `base` with the revision ID of the last target migration.
+```
+
+### Applying/reverting migrations in PROD
+For production deployment it is required to generate raw sql migration (offline migration), verity it
+and then apply to db.
+
+```sh
+alembic upgrade 128411c0b2c8:c2bdf99dcb8b --sql > migration.sql # generate offline migration
+```
+
+```sh
+PGPASSWORD=${DB_PASSWORD} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USERNAME} -d ${DB_NAME} < migration.sql # apply migration
+```

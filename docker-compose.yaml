@@ -1,0 +1,64 @@
+version: "3.4"
+
+
+services:
+  app-devbox: &app-devbox
+    build:
+      dockerfile: "./docker/service.dockerfile"
+      context: "."
+    image: ct_be-devbox:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - ".:/app"
+    environment: &app-devbox-env
+      ENV: "${ENV:-dev}"
+      GUNICORN_LOG_LEVEL: "debug"
+      DB_USERNAME: "${DB_USERNAME:?DB_USERNAME env var is missing}"
+      DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD env var is missing}"
+      DB_HOST: "${DB_HOST:?DB_HOST env var is missing}"
+      DB_PORT: "${DB_PORT:?DB_PORT env var is missing}"
+      DB_NAME: "${DB_NAME:?DB_NAME env var is missing}"
+    command: ["./docker/entrypoints/entrypoint.sh"]
+
+  ct-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: "${DB_USERNAME:?DB_USERNAME env var is missing}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD env var is missing}"
+      POSTGRES_DB: "${DB_NAME:?DB_NAME env var is missing}"
+
+  ct-db-init:
+    <<: *app-devbox
+    environment:
+      <<: *app-devbox-env
+      DB_HOST: "ct-db"
+    depends_on:
+      - ct-db
+    command: ["./docker/files/wait-for-it.sh", "${DB_HOST:?DB_HOST env var is missing}:${DB_PORT:?DB_PORT env var is missing}", "--timeout=120", "--", "./docker/files/init_db.sh"]
+
+  run-tests:
+    <<: *app-devbox
+    environment:
+      <<: *app-devbox-env
+    volumes:
+      - ".:/app"
+    entrypoint: ["./docker/entrypoints/entrypoint.sh",  "run-tests"]
+
+  dev-service:
+    <<: *app-devbox
+    environment:
+      <<: *app-devbox-env
+      ENV: "${ENV:-dev}"
+      GUNICORN_LOG_LEVEL: "debug"
+    stdin_open: true
+    tty: true
+    ports:
+      - "5000:5000"
+    volumes:
+      - ".:/app"
+    depends_on:
+      ct-db-init:
+        condition: service_completed_successfully
+    command: ["./docker/entrypoints/entrypoint.sh",  "start-dev-service"]
